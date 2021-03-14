@@ -8,3 +8,9 @@ class InstrumentSerializer(serializers.ModelSerializer):
         model = Instrument
         fields = ['ticker', 'figi', 'name',
                   'currency', 'isin', 'lot', 'icon_url']
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username']

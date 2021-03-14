@@ -15,12 +15,14 @@ Including another URLconf
 """
 from api import urls as apiurls
 from django.contrib import admin
-from django.urls import path, include
-
+from django.urls import path, include, re_path
+from django.views.generic import TemplateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('stocks/', include('stocks.urls')),
-    path('', include(apiurls.router.urls)),
-    path('api/', include('rest_framework.urls'))
+    path('api-auth/', include('rest_framework.urls')),
+    path('api/', include(apiurls.router.urls)),
+    re_path(r"^.*$", TemplateView.as_view(template_name="index.html"),
+            name="entry-point"),
 ]
