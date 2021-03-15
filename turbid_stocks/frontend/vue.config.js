@@ -1,5 +1,5 @@
 const BundleTracker = require("webpack-bundle-tracker");
-
+const path = require('path')
 module.exports = {
   publicPath: "http://127.0.0.1:8080/",
   outputDir: "./dist/",
@@ -25,6 +25,9 @@ module.exports = {
       .https(false)
       .disableHostCheck(true)
       .headers({ "Access-Control-Allow-Origin": ["*"] });
+
+    config.resolve.alias.set('vue$', path.join(__dirname, 'node_modules/vue'));
+    config.resolve.alias.set('highcharts$', path.join(__dirname, 'node_modules/highcharts'));
   }
 
   // uncomment before executing 'npm run build'

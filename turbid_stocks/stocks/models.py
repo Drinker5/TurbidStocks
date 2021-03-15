@@ -1,6 +1,43 @@
 from django.db import models
 
 # Create your models here.
+INTERVALS = [("1min", "1min"),
+             ("2min", "2min"),
+             ("3min", "3min"),
+             ("5min", "5min"),
+             ("10min", "10min"),
+             ("15min", "15min"),
+             ("30min", "30min"),
+             ("hour", "hour"),
+             ("day", "day"),
+             ("week", "week"),
+             ("month", "month")]
+
+
+class Candle(models.Model):
+    figi = models.CharField(max_length=12)
+    interval = models.CharField(choices=INTERVALS, max_length=10)
+    o = models.FloatField()
+    c = models.FloatField()
+    h = models.FloatField()
+    l = models.FloatField()
+    v = models.FloatField()
+    time = models.DateTimeField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['figi', 'interval'],
+                         name='figi_interval_idx'),
+            models.Index(fields=['figi', 'interval', 'time'],
+                         name='unique_idx')
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['figi', 'interval', 'time'],
+                                    name='unique_candle')
+        ]
+
+    def __str__(self):
+        return f"{self.figi}-{self.interval}-{self.time}"
 
 
 class Token(models.Model):

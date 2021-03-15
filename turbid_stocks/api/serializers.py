@@ -1,4 +1,4 @@
-from stocks.models import Instrument
+from stocks.models import Instrument, Candle
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
@@ -6,8 +6,14 @@ from rest_framework import serializers
 class InstrumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Instrument
-        fields = ['ticker', 'figi', 'name',
+        fields = ['url', 'ticker', 'figi', 'name',
                   'currency', 'isin', 'lot', 'icon_url']
+
+
+class CandleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Candle
+        fields = ['figi', 'interval', 'o', 'c', 'h', 'l', 'v', 'time']
 
 
 class UserSerializer(serializers.ModelSerializer):

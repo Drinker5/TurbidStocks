@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "command": "npm run serve",
+            "name": "Frontend",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}\\turbid_stocks\\frontend"
+        },
+        {
+            "name": "Backend",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\turbid_stocks\\manage.py",
+            "args": [
+                "runserver"
+            ],
+            "django": true
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Backend+Frontend",
+            "configurations": ["Backend", "Frontend"],
+        }
+    ]
+}

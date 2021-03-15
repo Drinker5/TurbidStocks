@@ -1,11 +1,14 @@
 <template>
-  <div class="home">
-    <InstrumentPicker />
-  </div>
+  <InstrumentPicker @select="select" />
+  <router-view :key="$route.fullPath" />
 </template>
 
 <script>
 export default {
-  name: "Home",
+  methods: {
+    select(ticker) {
+      this.$router.push({ name: "stock", params: { id: ticker } });
+    },
+  },
 };
 </script>

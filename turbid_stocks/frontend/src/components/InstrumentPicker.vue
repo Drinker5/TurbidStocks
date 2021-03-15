@@ -5,27 +5,43 @@
     remote
     :remote-method="remoteMethod"
     :loading="loading"
+    @change="change"
   >
     <el-option
       v-for="item in options"
       :key="item.value"
-      :label="item.label"
-      :value="item.value"
+      :label="item.name"
+      :value="item.ticker"
     >
+      <el-row :gutter="20">
+        <el-col :span="4">
+          <el-avatar size="small" :src="item.icon_url"></el-avatar>
+        </el-col>
+        <el-col :span="16" style="text-overflow: ellipsis; overflow: hidden;">{{
+          item.name
+        }}</el-col>
+
+        <el-col :span="4">
+          <span style="float: right; color: #8492a6; font-size: 13px">{{
+            item.ticker
+          }}</span>
+        </el-col>
+      </el-row>
     </el-option>
   </el-select>
-  {{ ticker }}
 </template>
 
 <script>
 export default {
-  props: {},
   data() {
     return {
       loading: false,
       options: [],
       ticker: null,
     };
+  },
+  mounted() {
+    this.remoteMethod("");
   },
   methods: {
     remoteMethod(query) {
@@ -38,13 +54,14 @@ export default {
           },
         })
         .then((response) => {
-          this.options = response.data.results.map((i) => {
-            return { value: i.ticker, label: i.name };
-          });
+          this.options = response.data.results;
         })
         .finally(() => {
           this.loading = false;
         });
+    },
+    change(ticker) {
+      this.$emit("select", ticker);
     },
   },
 };
