@@ -12,7 +12,7 @@
 1. `py .\turbid_stocks\manage.py migrate`
 1. `py .\turbid_stocks\manage.py createsuperuser`
 1. Ctrl+Shift+D Run and debug **Backend+Frontend** (F5)
-1. Put tinkoff sandbox token http://127.0.0.1:8000/admin/stocks/token/tinkoff/change/
+1. Put [tinkoff sandbox token](https://tinkoffcreditsystems.github.io/invest-openapi/auth/#_2) here http://127.0.0.1:8000/admin/stocks/token/tinkoff/change/
 1. Sync stocks http://127.0.0.1:8000/stocks/
 1. ...
 1. STONKS!!!
