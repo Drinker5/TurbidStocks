@@ -18,6 +18,12 @@ StockCharts(HighCharts);
 export default {
   props: {
     instrument: Object,
+    from: Date,
+    to: Date,
+    interval: {
+      type: String,
+      default: "day",
+    },
   },
   components: {
     VueHighcharts,
@@ -30,9 +36,18 @@ export default {
     };
   },
   mounted() {
-    let from = new Date();
-    from.setFullYear(from.getFullYear() - 1);
-    this.loadCandles(from, new Date());
+    this.loadCandles();
+  },
+  watch: {
+    interval() {
+      this.loadCandles();
+    },
+    from() {
+      if (!this.loading) this.loadCandles();
+    },
+    to() {
+      if (!this.loading) this.loadCandles();
+    },
   },
   computed: {
     chartOptions() {
@@ -54,15 +69,15 @@ export default {
     },
   },
   methods: {
-    loadCandles(from, to) {
+    loadCandles() {
       this.loading = true;
       this.axios
         .get("/api/candles/", {
           params: {
             figi: this.instrument.figi,
-            interval: "day",
-            from: from,
-            to: to,
+            interval: this.interval,
+            from: this.from,
+            to: this.to,
             format: "json",
           },
         })

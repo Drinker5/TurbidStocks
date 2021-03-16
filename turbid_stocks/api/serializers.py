@@ -13,7 +13,7 @@ class InstrumentSerializer(serializers.ModelSerializer):
 class CandleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Candle
-        fields = ['figi', 'interval', 'o', 'c', 'h', 'l', 'v', 'time']
+        fields = ['o', 'c', 'h', 'l', 'v', 'time']
 
 
 class UserSerializer(serializers.ModelSerializer):
