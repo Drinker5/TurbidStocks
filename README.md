@@ -2,6 +2,7 @@
 ## Backend
 - [Django](https://www.djangoproject.com/)
 - [Django REST framework](https://www.django-rest-framework.org/)
+- [Django Channels](https://channels.readthedocs.io/)
 ## Frontend
 - [Vue3](https://v3.vuejs.org/)
 - [ElementPlus](https://element-plus.org/#/en-US)

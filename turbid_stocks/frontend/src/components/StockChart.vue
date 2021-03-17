@@ -42,11 +42,11 @@ export default {
     interval() {
       this.loadCandles();
     },
-    from() {
-      if (!this.loading) this.loadCandles();
+    from(newV) {
+      if (!this.loading && newV) this.loadCandles();
     },
-    to() {
-      if (!this.loading) this.loadCandles();
+    to(newV) {
+      if (!this.loading && newV) this.loadCandles();
     },
   },
   computed: {

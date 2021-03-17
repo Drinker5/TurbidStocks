@@ -9,6 +9,8 @@ from .models import Token, Instrument, Candle
 from datetime import datetime, timedelta
 from tenacity import retry, retry_if_exception_type, wait_fixed, before, before_log
 import logging
+import channels.layers
+from asgiref.sync import async_to_sync
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -158,6 +160,16 @@ def load_candles(figi, from_, to, interval):
     if from_ == to:
         return
 
+    channel_layer = channels.layers.get_channel_layer()
+    async_to_sync(channel_layer.group_send)('stocks', {
+        'type': 'stocks.load.message',
+        'message': {
+            'type': 'start',
+            'from': from_,
+            'to': to
+        }
+    })
+
     # Проверка максимально допустимого промежутка для загрузки свечей
     max_delta = max_allowed_request_interval(interval)
     delta = get_delta_by_interval(interval)
@@ -177,6 +189,21 @@ def load_candles(figi, from_, to, interval):
         to_i = to_i + max_delta
         if to_i > to:
             to_i = to
+
+        async_to_sync(channel_layer.group_send)('stocks', {
+            'type': 'stocks.load.message',
+            'message': {
+                'type': 'progress',
+                'position': to_i,
+            }
+        })
+
+    async_to_sync(channel_layer.group_send)('stocks', {
+        'type': 'stocks.load.message',
+        'message': {
+            'type': 'end'
+        }
+    })
 
 
 @retry(wait=wait_fixed(60),

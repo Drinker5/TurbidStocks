@@ -1,32 +1,35 @@
 <template>
-  <el-date-picker
-    v-model="dateRange"
-    type="daterange"
-    align="right"
-    unlink-panels
-    range-separator="To"
-    start-placeholder="Start date"
-    end-placeholder="End date"
-    :shortcuts="shortcuts"
-  >
-  </el-date-picker>
-  <el-select v-model="interval" placeholder="Interval">
-    <el-option
-      v-for="item in intervalOptions"
-      :key="item.value"
-      :label="item.label"
-      :value="item.value"
-      :disabled="item.disabled"
+  <div>
+    <Progress />
+    <el-date-picker
+      v-model="dateRange"
+      type="daterange"
+      align="right"
+      unlink-panels
+      range-separator="To"
+      start-placeholder="Start date"
+      end-placeholder="End date"
+      :shortcuts="shortcuts"
     >
-    </el-option>
-  </el-select>
-  <div v-if="instrument">
-    <StockChart
-      :instrument="instrument"
-      :from="dateRange[0]"
-      :to="dateRange[1]"
-      :interval="interval"
-    />
+    </el-date-picker>
+    <el-select v-model="interval" placeholder="Interval">
+      <el-option
+        v-for="item in intervalOptions"
+        :key="item.value"
+        :label="item.label"
+        :value="item.value"
+        :disabled="item.disabled"
+      >
+      </el-option>
+    </el-select>
+    <div v-if="instrument">
+      <StockChart
+        :instrument="instrument"
+        :from="dateRange ? dateRange[0] : null"
+        :to="dateRange ? dateRange[1] : null"
+        :interval="interval"
+      />
+    </div>
   </div>
 </template>
 
@@ -37,7 +40,7 @@ export default {
       loading: false,
       instrument: null,
       ticker: this.$route.params.id,
-      dateRange: null,
+      dateRange: "",
       shortcuts: [
         {
           text: "Last week",
@@ -63,6 +66,15 @@ export default {
             const end = new Date();
             const start = new Date();
             start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+            return [start, end];
+          })(),
+        },
+        {
+          text: "Last year",
+          value: (() => {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 365);
             return [start, end];
           })(),
         },
