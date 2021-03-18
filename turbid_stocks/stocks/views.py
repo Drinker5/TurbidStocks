@@ -11,6 +11,7 @@ from tenacity import retry, retry_if_exception_type, wait_fixed, before, before_
 import logging
 import channels.layers
 from asgiref.sync import async_to_sync
+import numpy
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -50,20 +51,23 @@ def sync(request):
 
 
 def sync_candles(figi, from_, to, interval):
-    candles = Candle.objects.filter(figi=figi, interval=interval)
-    aggr = candles.aggregate(min=Min('time'), max=Max('time'))
-    minTime = aggr['min']
-    maxTime = aggr['max']
-
-    if minTime is None and maxTime is None:
+    delta = get_delta_by_interval(interval)
+    if delta >= timedelta(days=1):
         load_candles(figi, from_, to, interval)
     else:
-        minTime = minTime - get_delta_by_interval(interval)
-        maxTime = maxTime + get_delta_by_interval(interval)
-        if from_ < minTime:
-            load_candles(figi, from_, minTime, interval)
-        if to > maxTime:
-            load_candles(figi, maxTime, to, interval)
+        load_candles(figi, from_, to, "day")
+        candle_day_time = Candle.objects.filter(
+            figi=figi, interval="day", time__range=(from_, to)
+        ).values_list("time", flat=True)
+
+        candle_interval_time = Candle.objects.filter(
+            figi=figi, interval=interval, time__in=candle_day_time
+        ).values_list("time", flat=True)
+
+        days_need_to_sync = numpy.setdiff1d(
+            candle_day_time, candle_interval_time)
+
+        load_candles_days(figi, days_need_to_sync, interval)
 
 
 def get_delta_by_interval(interval: str):
@@ -156,6 +160,41 @@ def interval_from_str(value: str) -> tinvest.CandleResolution:
     return tinvest.CandleResolution[value]
 
 
+def load_candles_days(figi, days, interval):
+    channel_layer = channels.layers.get_channel_layer()
+    async_to_sync(channel_layer.group_send)('stocks', {
+        'type': 'stocks.load.message',
+        'message': {
+            'type': 'start',
+            'from': 0,
+            'to': len(days)
+        }
+    })
+
+    client = get_client()
+    tinterval = interval_from_str(interval)
+    i = 0
+    for day in days:
+        from_ = day
+        to = day + timedelta(days=1)
+        load_candles_internal(client, figi, from_, to, interval, tinterval)
+        i = i + 1
+        async_to_sync(channel_layer.group_send)('stocks', {
+            'type': 'stocks.load.message',
+            'message': {
+                'type': 'progress',
+                'position': i,
+            }
+        })
+
+    async_to_sync(channel_layer.group_send)('stocks', {
+        'type': 'stocks.load.message',
+        'message': {
+            'type': 'end'
+        }
+    })
+
+
 def load_candles(figi, from_, to, interval):
     if from_ == to:
         return
@@ -179,11 +218,13 @@ def load_candles(figi, from_, to, interval):
     to_i = from_i + max_delta
     if to_i > to:
         to_i = to
+
+    client = get_client()
     while from_i < to:
         # Проверка минимального допустимого промежутка для загрузки свечей
         if to_i - from_i < delta:
             break
-        load_candles_internal(figi, from_i, to_i, interval, tinterval)
+        load_candles_internal(client, figi, from_i, to_i, interval, tinterval)
 
         from_i = from_i + max_delta
         to_i = to_i + max_delta
@@ -209,8 +250,8 @@ def load_candles(figi, from_, to, interval):
 @retry(wait=wait_fixed(60),
        retry=retry_if_exception_type(tinvest.TooManyRequestsError),
        before=before_log(logger, logging.DEBUG))
-def load_candles_internal(figi, from_i, to_i, interval, tinterval):
-    client = get_client()
+def load_candles_internal(client: tinvest.SyncClient,
+                          figi, from_i, to_i, interval, tinterval):
     response = client.get_market_candles(
         figi=figi, from_=from_i, to=to_i, interval=tinterval)
     candles = list(map(lambda i: Candle(

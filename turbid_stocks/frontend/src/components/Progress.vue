@@ -6,7 +6,7 @@
     :percentage="100 * percentage"
     status="warning"
   >
-    <span>{{ positionDate }}</span>
+    <span>{{ syncProgress }}</span>
   </el-progress>
 </template>
 
@@ -40,7 +40,9 @@ export default {
         (this.endPosition - this.startPosition)
       );
     },
-    positionDate() {
+    syncProgress() {
+      if (this.position < 10000000)
+        return `${this.position}/${this.endPosition}`;
       return moment(this.position).format("DD.MM.YYYY");
     },
   },

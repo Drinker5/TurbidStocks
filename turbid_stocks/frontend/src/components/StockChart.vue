@@ -3,9 +3,10 @@
     <vue-highcharts
       type="stockChart"
       :options="chartOptions"
-      :redrawOnUpdate="true"
+      :redrawOnUpdate="false"
       :oneToOneUpdate="false"
       :animateOnUpdate="true"
+      ref="chart"
     />
   </div>
 </template>
@@ -52,15 +53,12 @@ export default {
   computed: {
     chartOptions() {
       return {
-        rangeSelector: {
-          selected: 5,
-        },
-
         title: {
           text: this.instrument.name,
         },
         series: [
           {
+            type: "candlestick",
             name: this.instrument.ticker,
             data: this.candles,
           },
@@ -84,8 +82,12 @@ export default {
         .then((response) => {
           this.candles = response.data.results.map((i) => {
             //[new Date(i.time), i.o, i.h, i.l, i.c];
-            return [new Date(i.time).getTime(), i.c];
+            return [new Date(i.time).getTime(), i.o, i.h, i.l, i.c];
           });
+
+          setTimeout(() => {
+            this.$refs.chart.chart.redraw();
+          }, 0);
         })
         .finally(() => {
           this.loading = false;
