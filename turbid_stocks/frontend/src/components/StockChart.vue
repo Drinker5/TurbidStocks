@@ -3,10 +3,9 @@
     <vue-highcharts
       type="stockChart"
       :options="chartOptions"
-      :redrawOnUpdate="false"
+      :redrawOnUpdate="true"
       :oneToOneUpdate="false"
       :animateOnUpdate="true"
-      ref="chart"
     />
   </div>
 </template>
@@ -18,13 +17,8 @@ import VueHighcharts from "vue3-highcharts";
 StockCharts(HighCharts);
 export default {
   props: {
+    candles: Array,
     instrument: Object,
-    from: Date,
-    to: Date,
-    interval: {
-      type: String,
-      default: "day",
-    },
   },
   components: {
     VueHighcharts,
@@ -32,68 +26,57 @@ export default {
 
   data() {
     return {
-      candles: null,
       loading: false,
     };
   },
-  mounted() {
-    this.loadCandles();
-  },
-  watch: {
-    interval() {
-      this.loadCandles();
-    },
-    from(newV) {
-      if (!this.loading && newV) this.loadCandles();
-    },
-    to(newV) {
-      if (!this.loading && newV) this.loadCandles();
-    },
-  },
+  mounted() {},
+  watch: {},
   computed: {
     chartOptions() {
       return {
+        chart: {
+          type: "candlestick",
+          zoomType: "x",
+        },
         title: {
           text: this.instrument.name,
         },
+        time: {
+          useUTC: false,
+        },
         series: [
           {
-            type: "candlestick",
             name: this.instrument.ticker,
-            data: this.candles,
+            data: this.candles
+              ? this.candles.map((i) => {
+                  return [new Date(i.time).getTime(), i.o, i.h, i.l, i.c];
+                })
+              : null,
           },
         ],
+
+        rangeSelector: {
+          buttons: [
+            {
+              type: "month",
+              count: 1,
+              text: "1m",
+            },
+            {
+              type: "year",
+              count: 1,
+              text: "1y",
+            },
+            {
+              type: "all",
+              text: "All",
+            },
+          ],
+        },
       };
     },
   },
-  methods: {
-    loadCandles() {
-      this.loading = true;
-      this.axios
-        .get("/api/candles/", {
-          params: {
-            figi: this.instrument.figi,
-            interval: this.interval,
-            from: this.from,
-            to: this.to,
-            format: "json",
-          },
-        })
-        .then((response) => {
-          this.candles = response.data.results.map((i) => {
-            //[new Date(i.time), i.o, i.h, i.l, i.c];
-            return [new Date(i.time).getTime(), i.o, i.h, i.l, i.c];
-          });
-
-          setTimeout(() => {
-            this.$refs.chart.chart.redraw();
-          }, 0);
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-    },
-  },
+  methods: {},
 };
 </script>
 

@@ -12,24 +12,17 @@
       :shortcuts="shortcuts"
     >
     </el-date-picker>
-    <el-select v-model="interval" placeholder="Interval">
-      <el-option
-        v-for="item in intervalOptions"
-        :key="item.value"
-        :label="item.label"
-        :value="item.value"
-        :disabled="item.disabled"
-      >
-      </el-option>
-    </el-select>
     <div v-if="instrument">
       <StockChart
         :instrument="instrument"
-        :from="dateRange ? dateRange[0] : null"
-        :to="dateRange ? dateRange[1] : null"
-        :interval="interval"
+        :loading="loading"
+        :candles="candles"
       />
     </div>
+  </div>
+
+  <div v-if="instrument">
+    <Simulator :instrument="instrument" :candles="candles" />
   </div>
 </template>
 
@@ -40,7 +33,9 @@ export default {
       loading: false,
       instrument: null,
       ticker: this.$route.params.id,
-      dateRange: "",
+      dateRange: null,
+      candles: null,
+      intardayCandles: null,
       shortcuts: [
         {
           text: "Last week",
@@ -80,19 +75,12 @@ export default {
         },
       ],
       intervalOptions: [
-        { value: "1min", label: "1min" },
-        { value: "2min", label: "2min", disabled: true },
-        { value: "3min", label: "3min", disabled: true },
-        { value: "5min", label: "5min" },
-        { value: "10min", label: "10min", disabled: true },
-        { value: "15min", label: "15min" },
-        { value: "30min", label: "30min", disabled: true },
-        { value: "hour", label: "hour" },
-        { value: "day", label: "day" },
-        { value: "week", label: "week" },
-        { value: "month", label: "month" },
+        { value: "1min", label: "1min", step: "00:01" },
+        { value: "5min", label: "5min", step: "00:05" },
+        { value: "10min", label: "10min", step: "00:10" },
+        { value: "15min", label: "15min", step: "00:15" },
+        { value: "30min", label: "30min", step: "00:30" },
       ],
-      interval: "day",
     };
   },
   mounted() {
@@ -100,20 +88,37 @@ export default {
     from.setFullYear(from.getFullYear() - 1);
     this.dateRange = [from, new Date()];
 
-    this.loadInstrument(this.ticker);
+    this.loadInstrument();
   },
-
+  watch: {
+    dateRange() {
+      if (!this.loading) this.loadDayCandles();
+    },
+  },
+  computed: {},
   methods: {
-    loadInstrument(ticker) {
+    loadInstrument() {
       this.loading = true;
-      this.axios
-        .get(`/api/instruments/${ticker}/`, {
-          params: {
-            format: "json",
-          },
-        })
+      this.$stockService
+        .loadInstrument(this.ticker)
         .then((response) => {
           this.instrument = response.data;
+          this.loadDayCandles();
+        })
+        .finally(() => {
+          this.loading = false;
+        });
+    },
+    loadDayCandles() {
+      this.$stockService
+        .loadCandles({
+          figi: this.instrument.figi,
+          interval: "day",
+          from: this.dateRange[0],
+          to: this.dateRange[1],
+        })
+        .then((response) => {
+          this.candles = response.data.results;
         })
         .finally(() => {
           this.loading = false;

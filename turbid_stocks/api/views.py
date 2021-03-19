@@ -19,7 +19,7 @@ class InstrumentViewSet(viewsets.ModelViewSet):
 
 
 class CandleSetPagination(PageNumberPagination):
-    page_size = 100000
+    page_size = 10000
 
 
 class CandleViewSet(viewsets.ModelViewSet):

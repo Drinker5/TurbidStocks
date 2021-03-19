@@ -7,13 +7,13 @@ import VueAxios from "vue-axios";
 import "element-plus/lib/theme-chalk/index.css";
 import upperFirst from "lodash/upperFirst";
 import camelCase from "lodash/camelCase";
-
+import stockPlugin from "./plugins/stock"
 const app = createApp(App)
   .use(router)
   .use(VueAxios, axios);
 app.use(ElementPlus)
 app.mount("#app");
-
+app.use(stockPlugin)
 const requireComponent = require.context(
   // The relative path of the components folder
   "./components",
