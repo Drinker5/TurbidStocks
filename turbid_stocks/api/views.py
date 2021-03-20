@@ -5,6 +5,7 @@ from rest_framework import filters, permissions, serializers, viewsets
 from .serializers import InstrumentSerializer, CandleSerializer, UserSerializer
 from stocks.views import sync_candles
 from rest_framework.pagination import PageNumberPagination
+import datetime
 
 
 class InstrumentViewSet(viewsets.ModelViewSet):
@@ -46,6 +47,22 @@ class CandleViewSet(viewsets.ModelViewSet):
         if to is None:
             raise serializers.ValidationError('to empty')
         queryset = queryset.filter(time__range=[from_, to])
+
+        hours = self.request.query_params.getlist('hours', None)
+        minutes = self.request.query_params.getlist('minutes', None)
+        if len(hours) > 0 and len(minutes) > 0 and len(hours) == len(minutes):
+            i = 0
+            times = []
+            while i < len(hours):
+                times.append(datetime.time(
+                    hour=int(hours[i]), minute=int(minutes[i])))
+                i = i + 1
+            queryset = queryset.filter(time__time__in=times)
+        else:
+            if len(hours) > 0:
+                queryset = queryset.filter(time__hour__in=hours)
+            if len(minutes) > 0:
+                queryset = queryset.filter(time__minute__in=minutes)
 
         sync_candles(figi, parse_datetime(from_), parse_datetime(to), interval)
         return queryset

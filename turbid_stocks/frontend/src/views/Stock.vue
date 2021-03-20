@@ -22,7 +22,11 @@
   </div>
 
   <div v-if="instrument">
-    <Simulator :instrument="instrument" :candles="candles" />
+    <Simulator
+      :instrument="instrument"
+      :candles="candles"
+      :date-range="dateRange"
+    />
   </div>
 </template>
 

@@ -1,10 +1,11 @@
 
 import axios from "axios";
+import qs from 'qs'
 
 export default {
   install: (app) => {
     app.config.globalProperties.$stockService = {
-      loadCandles: ({ figi, interval, from, to }) => {
+      loadCandles: ({ figi, interval, from, to, hours, minutes }) => {
         return axios
           .get("/api/candles/", {
             params: {
@@ -13,7 +14,12 @@ export default {
               from: from,
               to: to,
               format: "json",
+              hours: hours,
+              minutes: minutes
             },
+            paramsSerializer: params => {
+              return qs.stringify(params, { arrayFormat: "repeat" })
+            }
           })
       },
 
