@@ -1,6 +1,10 @@
 <template>
-  <InstrumentPicker @select="select" />
-  <router-view :key="$route.fullPath" />
+  <el-container>
+    <el-main>
+      <InstrumentPicker @select="select" />
+      <router-view :key="$route.fullPath" />
+    </el-main>
+  </el-container>
 </template>
 
 <script>

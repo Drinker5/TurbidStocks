@@ -1,54 +1,138 @@
 <template>
-  <el-input placeholder="Start money" v-model="startMoney" type="number">
-    <template #suffix>
-      {{ instrument.currency }}
-    </template>
-  </el-input>
+  <el-row :gutter="10">
+    <el-col :span="6">
+      <el-form label-width="120px" size="mini">
+        <el-form-item label="Lot price">
+          <el-input
+            placeholder="Lot price"
+            v-model="lotPrice"
+            type="number"
+            :disabled="true"
+          >
+            <template #suffix>
+              {{ instrument.currency }}
+            </template>
+          </el-input>
+        </el-form-item>
 
-  <el-input-number
-    v-model="brokerTax"
-    :precision="3"
-    :step="0.05"
-    :min="0"
-    :max="5"
-    placeholder="Broker tax"
-  >
-  </el-input-number>
+        <el-form-item label="Start money">
+          <el-input
+            placeholder="Start money"
+            v-model="startMoney"
+            type="number"
+            :min="lotPrice"
+          >
+            <template #suffix>
+              {{ instrument.currency }}
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="Broker tax %">
+          <el-input-number
+            v-model="brokerTax"
+            :precision="3"
+            :step="0.05"
+            :min="0"
+            :max="5"
+            placeholder="Broker tax %"
+          >
+          </el-input-number>
+        </el-form-item>
+        <el-form-item label="Candle interval">
+          <el-select v-model="interval" placeholder="Select interval">
+            <el-option
+              v-for="item in intervalOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            >
+            </el-option>
+          </el-select>
+        </el-form-item>
 
-  <span>Buy time {{ formatTooltip(buyTime) }}</span>
-  <span>Sell time {{ formatTooltip(sellTime) }}</span>
-  <el-slider
-    v-model="buySellTimes"
-    range
-    show-stops
-    :format-tooltip="formatTooltip"
-    :min="minTime"
-    :max="maxTime"
-    :step="step"
-  >
-  </el-slider>
-  <el-checkbox v-model="isBuySellReversed">Reverse buy/sell</el-checkbox>
-  <el-button type="primary" :loading="loading" @click="simulate">
-    Simulate
-  </el-button>
+        <el-form-item label="Buy-sell times">
+          <el-row :gutter="5">
+            <el-col :span="12">Buy time {{ formatTooltip(buyTime) }}</el-col>
+            <el-col :span="12">Sell time {{ formatTooltip(sellTime) }}</el-col>
+          </el-row>
+          <el-slider
+            v-model="buySellTimes"
+            range
+            show-stops
+            :format-tooltip="formatTooltip"
+            :min="minTime"
+            :max="maxTime"
+            :step="step"
+          >
+          </el-slider>
+          <el-checkbox v-model="isBuySellReversed"
+            >Reverse buy/sell</el-checkbox
+          >
+        </el-form-item>
 
-  <SimulatorReview
-    :operations="operations"
-    :loading="loading"
-    :instrument="instrument"
-  />
+        <el-form-item label="Buy option">
+          <el-radio-group v-model="buyOption">
+            <el-radio-button label="Open" name="buyOption"></el-radio-button>
+            <el-radio-button label="High" name="buyOption"></el-radio-button>
+            <el-radio-button label="Low" name="buyOption"></el-radio-button>
+            <el-radio-button label="Close" name="buyOption"></el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="Sell option">
+          <el-radio-group v-model="sellOption">
+            <el-radio-button label="Open" name="sellOption"></el-radio-button>
+            <el-radio-button label="High" name="sellOption"></el-radio-button>
+            <el-radio-button label="Low" name="sellOption"></el-radio-button>
+            <el-radio-button label="Close" name="sellOption"></el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="loading" @click="simulate">
+            Simulate
+          </el-button>
+        </el-form-item>
+        <el-form-item label="Trading days" v-if="operations.length">
+          {{ candles.length }}
+        </el-form-item>
+        <el-form-item label="Tades" v-if="operations.length">
+          {{ operations.length }}
+        </el-form-item>
+        <el-form-item label="Tax total" v-if="operations.length">
+          {{ taxTotal() }} {{ instrument.currency }}
+        </el-form-item>
+        <el-form-item label="Profit" v-if="operations.length">
+          {{ profit() }} {{ instrument.currency }}
+        </el-form-item>
+        <el-form-item label="Performance" v-if="operations.length">
+          {{ performance() }}%
+        </el-form-item>
+      </el-form>
+    </el-col>
+
+    <el-col :span="18">
+      <StockChart
+        :instrument="instrument"
+        :loading="loading"
+        :candles="candles"
+      />
+
+      <SimulatorReview
+        :operations="operations"
+        :loading="loading"
+        :instrument="instrument"
+      />
+    </el-col>
+  </el-row>
 </template>
 
 <script>
+import moment from "moment";
+
 export default {
   props: {
     instrument: Object,
     candles: Array,
     dateRange: Array,
-    interval: {
-      type: Number,
-      default: 15,
-    },
   },
   components: {},
 
@@ -63,18 +147,34 @@ export default {
       buySellTimes: [(7 * 60 + 30) * 60 * 1000, 18 * 60 * 60 * 1000],
       minTime: 7 * 60 * 60 * 1000,
       maxTime: 23 * 60 * 60 * 1000,
-      step: this.interval * 60 * 1000,
-      intervalRequestParam: `${this.interval}min`,
       isBuySellReversed: false,
+      lotPrice: 0,
+      buyOption: "Open",
+      sellOption: "Open",
+      interval: 15,
+      intervalOptions: [
+        { value: 1, label: "1min", step: "00:01" },
+        { value: 5, label: "5min", step: "00:05" },
+        { value: 10, label: "10min", step: "00:10" },
+        { value: 15, label: "15min", step: "00:15" },
+        { value: 30, label: "30min", step: "00:30" },
+      ],
     };
   },
   mounted() {},
   watch: {
     candles(newV) {
       this.loadIntradayCandles(newV[0]);
+      this.lotPrice = newV[0].o * this.instrument.lot;
     },
   },
   computed: {
+    intervalRequestParam() {
+      return `${this.interval}min`;
+    },
+    step() {
+      return this.interval * 60 * 1000;
+    },
     buyTime() {
       if (this.isBuySellReversed) return this.buySellTimes[1];
       return this.buySellTimes[0];
@@ -163,23 +263,39 @@ export default {
           this.loading = false;
         });
     },
+    getOptionValue(optionName) {
+      switch (optionName) {
+        case "Open":
+          return "o";
+        case "High":
+          return "h";
+        case "Low":
+          return "l";
+        case "Close":
+          return "c";
+      }
+
+      return "o";
+    },
 
     startSimulate(candles, buySellHours, buySellMinutes) {
       this.money = +this.startMoney;
       this.stockCount = 0;
       this.operations = [];
+      let b = this.getOptionValue(this.buyOption);
+      let s = this.getOptionValue(this.sellOption);
       for (const candle of candles) {
         var time = new Date(candle.time);
         if (
           time.getHours() == buySellHours[0] &&
           time.getMinutes() == buySellMinutes[0]
         )
-          this.buy(time, candle.o);
+          this.buy(time, candle[b]);
         if (
           time.getHours() == buySellHours[1] &&
           time.getMinutes() == buySellMinutes[1]
         )
-          this.sell(time, candle.o);
+          this.sell(time, candle[s]);
       }
     },
 
@@ -188,10 +304,10 @@ export default {
       let lotPrice = price * this.instrument.lot;
       let lotsCanBeBought = Math.trunc(this.money / lotPrice);
       let tradePrice = lotsCanBeBought * lotPrice;
-      let tax = this.get_tax(tradePrice);
+      let tax = this.getTax(tradePrice);
       let payment = tradePrice + tax;
       let count = lotsCanBeBought * this.instrument.lot;
-
+      if (count <= 0) return;
       this.money = Math.round((this.money - payment) * 100) / 100;
       this.stockCount += count;
       let value =
@@ -207,11 +323,12 @@ export default {
     },
 
     sell(time, price) {
+      if (this.stockCount <= 0) return;
       // продаём все
       let lotPrice = price * this.instrument.lot;
       let lotsCanBeSold = this.stockCount / this.instrument.lot;
       let tradePrice = lotsCanBeSold * lotPrice;
-      let tax = this.get_tax(tradePrice);
+      let tax = this.getTax(tradePrice);
       let refund = tradePrice - tax;
       let count = this.stockCount;
 
@@ -230,8 +347,34 @@ export default {
       });
     },
 
-    get_tax(val) {
+    getTax(val) {
       return Math.ceil(val * this.brokerTax) / 100;
+    },
+
+    taxTotal() {
+      if (this.operations.length <= 0) return;
+      let result = this.operations.reduce((a, b) => {
+        return { tax: a.tax + b.tax };
+      }).tax;
+      return Math.round(result * 100) / 100;
+    },
+    profit() {
+      if (this.operations.length <= 0) return;
+      let lastOperation = this.operations[this.operations.length - 1];
+      let result = lastOperation.value - this.startMoney;
+      return Math.round(result * 100) / 100;
+    },
+    performance() {
+      if (this.operations.length <= 0) return;
+
+      let start = this.operations[0];
+      let end = this.operations[this.operations.length - 1];
+      let days = moment(end.time).diff(moment(start.time), "days");
+
+      let startValue = start.value;
+      let endValue = end.value;
+      let result = (100 * (endValue / startValue - 1)) / (days / 365);
+      return Math.round(result * 100) / 100;
     },
   },
 };

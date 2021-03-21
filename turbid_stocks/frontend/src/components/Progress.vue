@@ -1,13 +1,15 @@
 <template>
-  <el-progress
-    v-if="showProgress"
-    :text-inside="true"
-    :stroke-width="20"
-    :percentage="100 * percentage"
-    status="warning"
-  >
-    <span>{{ syncProgress }}</span>
-  </el-progress>
+  <div class="progress">
+    <el-progress
+      v-if="showProgress"
+      :text-inside="true"
+      :stroke-width="20"
+      :percentage="100 * percentage"
+      status="warning"
+    >
+      <span>{{ syncProgress }}</span>
+    </el-progress>
+  </div>
 </template>
 
 <script>
@@ -74,4 +76,10 @@ export default {
 };
 </script>
 
-<style></style>
+<style scoped>
+.progress {
+  position: absolute;
+  top: 10px;
+  width: 100%;
+}
+</style>

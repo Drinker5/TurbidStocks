@@ -1,25 +1,19 @@
 <template>
-  <div>
-    <Progress />
-    <el-date-picker
-      v-model="dateRange"
-      type="daterange"
-      align="right"
-      unlink-panels
-      range-separator="To"
-      start-placeholder="Start date"
-      end-placeholder="End date"
-      :shortcuts="shortcuts"
-    >
-    </el-date-picker>
-    <div v-if="instrument">
-      <StockChart
-        :instrument="instrument"
-        :loading="loading"
-        :candles="candles"
-      />
-    </div>
-  </div>
+  <Progress />
+  <el-form label-width="120px" size="mini">
+    <el-form-item label="Date range">
+      <el-date-picker
+        v-model="dateRange"
+        type="daterange"
+        unlink-panels
+        range-separator="To"
+        start-placeholder="Start date"
+        end-placeholder="End date"
+        :shortcuts="shortcuts"
+      >
+      </el-date-picker>
+    </el-form-item>
+  </el-form>
 
   <div v-if="instrument">
     <Simulator
@@ -77,13 +71,6 @@ export default {
             return [start, end];
           })(),
         },
-      ],
-      intervalOptions: [
-        { value: "1min", label: "1min", step: "00:01" },
-        { value: "5min", label: "5min", step: "00:05" },
-        { value: "10min", label: "10min", step: "00:10" },
-        { value: "15min", label: "15min", step: "00:15" },
-        { value: "30min", label: "30min", step: "00:30" },
       ],
     };
   },

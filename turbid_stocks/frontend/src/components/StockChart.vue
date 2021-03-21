@@ -38,9 +38,7 @@ export default {
           type: "candlestick",
           zoomType: "x",
         },
-        title: {
-          text: this.instrument.name,
-        },
+
         time: {
           useUTC: false,
         },
