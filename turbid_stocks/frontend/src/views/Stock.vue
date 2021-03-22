@@ -10,74 +10,106 @@
         start-placeholder="Start date"
         end-placeholder="End date"
         :shortcuts="shortcuts"
+        :default-time="defaultTime"
+        :disabled-date="disabledDate"
+        format="DD.MM.YYYY"
       >
       </el-date-picker>
     </el-form-item>
   </el-form>
 
   <div v-if="instrument">
-    <Simulator
-      :instrument="instrument"
-      :candles="candles"
-      :date-range="dateRange"
-    />
+    <Simulator :candles="candles" :date-range="dateRange" />
   </div>
 </template>
 
 <script>
+import { mapState } from "vuex";
 export default {
   data() {
     return {
       loading: false,
-      instrument: null,
       ticker: this.$route.params.id,
       dateRange: null,
+      defaultTime: [
+        new Date(2000, 1, 1, 0, 0, 0),
+        new Date(2000, 2, 1, 0, 0, 0),
+      ],
       candles: null,
       intardayCandles: null,
       shortcuts: [
         {
-          text: "Last week",
+          text: "1 Month",
           value: (() => {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-            return [start, end];
+            let x = new Date();
+            return [
+              new Date(x.getFullYear(), x.getMonth() - 1, x.getDate()),
+              new Date(x.getFullYear(), x.getMonth(), x.getDate()),
+            ];
           })(),
         },
         {
-          text: "Last month",
+          text: "3 Months",
           value: (() => {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
-            return [start, end];
+            let x = new Date();
+            return [
+              new Date(x.getFullYear(), x.getMonth() - 3, x.getDate()),
+              new Date(x.getFullYear(), x.getMonth(), x.getDate()),
+            ];
           })(),
         },
         {
-          text: "Last 3 months",
+          text: "1 Year",
           value: (() => {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
-            return [start, end];
+            let x = new Date();
+            return [
+              new Date(x.getFullYear() - 1, x.getMonth(), x.getDate()),
+              new Date(x.getFullYear(), x.getMonth(), x.getDate()),
+            ];
           })(),
         },
         {
-          text: "Last year",
+          text: "2 Years",
           value: (() => {
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 365);
-            return [start, end];
+            let x = new Date();
+            return [
+              new Date(x.getFullYear() - 2, x.getMonth(), x.getDate()),
+              new Date(x.getFullYear(), x.getMonth(), x.getDate()),
+            ];
+          })(),
+        },
+        {
+          text: "3 Years",
+          value: (() => {
+            let x = new Date();
+            return [
+              new Date(x.getFullYear() - 3, x.getMonth(), x.getDate()),
+              new Date(x.getFullYear(), x.getMonth(), x.getDate()),
+            ];
+          })(),
+        },
+        {
+          text: "5 Years",
+          value: (() => {
+            let x = new Date();
+            return [
+              new Date(x.getFullYear() - 5, x.getMonth(), x.getDate()),
+              new Date(x.getFullYear(), x.getMonth(), x.getDate()),
+            ];
           })(),
         },
       ],
+      disabledDate(time) {
+        return time.getTime() > Date.now();
+      },
     };
   },
   mounted() {
-    let from = new Date();
-    from.setFullYear(from.getFullYear() - 1);
-    this.dateRange = [from, new Date()];
+    let x = new Date();
+    this.dateRange = [
+      new Date(x.getFullYear() - 1, x.getMonth(), x.getDate()),
+      new Date(x.getFullYear(), x.getMonth(), x.getDate()),
+    ];
 
     this.loadInstrument();
   },
@@ -86,14 +118,14 @@ export default {
       if (!this.loading) this.loadDayCandles();
     },
   },
-  computed: {},
+  computed: mapState(["instrument"]),
   methods: {
     loadInstrument() {
       this.loading = true;
       this.$stockService
         .loadInstrument(this.ticker)
         .then((response) => {
-          this.instrument = response.data;
+          this.$store.commit("setInstrument", response.data);
           this.loadDayCandles();
         })
         .finally(() => {
@@ -101,6 +133,7 @@ export default {
         });
     },
     loadDayCandles() {
+      if (!this.dateRange) return;
       this.$stockService
         .loadCandles({
           figi: this.instrument.figi,

@@ -177,7 +177,8 @@ def load_candles_days(figi, days, interval):
     for day in days:
         from_ = day
         to = day + timedelta(days=1)
-        load_candles_internal(client, figi, from_, to, interval, tinterval)
+        load_candles_internal_dayfix(
+            client, figi, from_, to, interval, tinterval)
         i = i + 1
         async_to_sync(channel_layer.group_send)('stocks', {
             'type': 'stocks.load.message',
@@ -264,4 +265,39 @@ def load_candles_internal(client: tinvest.SyncClient,
         interval=interval,
         time=i.time),
         response.payload.candles))
+    Candle.objects.bulk_create(candles, ignore_conflicts=True)
+
+
+@retry(wait=wait_fixed(60),
+       retry=retry_if_exception_type(tinvest.TooManyRequestsError),
+       before=before_log(logger, logging.DEBUG))
+def load_candles_internal_dayfix(client: tinvest.SyncClient,
+                                 figi, from_i, to_i, interval, tinterval):
+    response = client.get_market_candles(
+        figi=figi, from_=from_i, to=to_i, interval=tinterval)
+    candles = list(map(lambda i: Candle(
+        figi=i.figi,
+        o=i.o,
+        c=i.c,
+        h=i.h,
+        l=i.l,
+        v=i.v,
+        interval=interval,
+        time=i.time),
+        response.payload.candles))
+
+    if len(response.payload.candles) > 0:
+        first_candle = response.payload.candles[0]
+        if first_candle.time != from_i:
+            candles.insert(0, Candle(
+                figi=figi,
+                o=first_candle.o,
+                c=first_candle.o,
+                h=first_candle.o,
+                l=first_candle.o,
+                v=0,
+                interval=interval,
+                time=from_i
+            ))
+
     Candle.objects.bulk_create(candles, ignore_conflicts=True)

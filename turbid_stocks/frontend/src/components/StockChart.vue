@@ -14,11 +14,11 @@
 import HighCharts from "highcharts";
 import StockCharts from "highcharts/modules/stock";
 import VueHighcharts from "vue3-highcharts";
+import { mapState } from "vuex";
 StockCharts(HighCharts);
 export default {
   props: {
     candles: Array,
-    instrument: Object,
   },
   components: {
     VueHighcharts,
@@ -73,6 +73,7 @@ export default {
         },
       };
     },
+    ...mapState(["instrument"]),
   },
   methods: {},
 };

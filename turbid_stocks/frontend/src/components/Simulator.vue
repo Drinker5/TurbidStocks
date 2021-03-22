@@ -70,20 +70,20 @@
           >
         </el-form-item>
 
-        <el-form-item label="Buy option">
-          <el-radio-group v-model="buyOption">
-            <el-radio-button label="Open" name="buyOption"></el-radio-button>
-            <el-radio-button label="High" name="buyOption"></el-radio-button>
-            <el-radio-button label="Low" name="buyOption"></el-radio-button>
-            <el-radio-button label="Close" name="buyOption"></el-radio-button>
+        <el-form-item label="Buy price">
+          <el-radio-group v-model="buyPrice">
+            <el-radio-button label="Open" name="buyPrice"></el-radio-button>
+            <el-radio-button label="High" name="buyPrice"></el-radio-button>
+            <el-radio-button label="Low" name="buyPrice"></el-radio-button>
+            <el-radio-button label="Close" name="buyPrice"></el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="Sell option">
-          <el-radio-group v-model="sellOption">
-            <el-radio-button label="Open" name="sellOption"></el-radio-button>
-            <el-radio-button label="High" name="sellOption"></el-radio-button>
-            <el-radio-button label="Low" name="sellOption"></el-radio-button>
-            <el-radio-button label="Close" name="sellOption"></el-radio-button>
+        <el-form-item label="Sell price">
+          <el-radio-group v-model="sellPrice">
+            <el-radio-button label="Open" name="sellPrice"></el-radio-button>
+            <el-radio-button label="High" name="sellPrice"></el-radio-button>
+            <el-radio-button label="Low" name="sellPrice"></el-radio-button>
+            <el-radio-button label="Close" name="sellPrice"></el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item>
@@ -110,27 +110,18 @@
     </el-col>
 
     <el-col :span="18">
-      <StockChart
-        :instrument="instrument"
-        :loading="loading"
-        :candles="candles"
-      />
-
-      <SimulatorReview
-        :operations="operations"
-        :loading="loading"
-        :instrument="instrument"
-      />
+      <StockChart :loading="loading" :candles="candles" />
+      <SimulatorReview :operations="operations" :loading="loading" />
     </el-col>
   </el-row>
 </template>
 
 <script>
 import moment from "moment";
+import { mapState } from "vuex";
 
 export default {
   props: {
-    instrument: Object,
     candles: Array,
     dateRange: Array,
   },
@@ -149,8 +140,8 @@ export default {
       maxTime: 23 * 60 * 60 * 1000,
       isBuySellReversed: false,
       lotPrice: 0,
-      buyOption: "Open",
-      sellOption: "Open",
+      buyPrice: "Open",
+      sellPrice: "Open",
       interval: 15,
       intervalOptions: [
         { value: 1, label: "1min", step: "00:01" },
@@ -183,6 +174,7 @@ export default {
       if (this.isBuySellReversed) return this.buySellTimes[0];
       return this.buySellTimes[1];
     },
+    ...mapState(["instrument"]),
   },
   methods: {
     loadIntradayCandles(candle) {
@@ -282,8 +274,8 @@ export default {
       this.money = +this.startMoney;
       this.stockCount = 0;
       this.operations = [];
-      let b = this.getOptionValue(this.buyOption);
-      let s = this.getOptionValue(this.sellOption);
+      let b = this.getOptionValue(this.buyPrice);
+      let s = this.getOptionValue(this.sellPrice);
       for (const candle of candles) {
         var time = new Date(candle.time);
         if (

@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
+import store from "./store"
 import axios from "axios";
 import ElementPlus from "element-plus";
 import VueAxios from "vue-axios";
@@ -8,12 +9,16 @@ import "element-plus/lib/theme-chalk/index.css";
 import upperFirst from "lodash/upperFirst";
 import camelCase from "lodash/camelCase";
 import stockPlugin from "./plugins/stock"
+import 'es6-promise/auto'
 const app = createApp(App)
   .use(router)
+  .use(store)
   .use(VueAxios, axios);
 app.use(ElementPlus)
 app.mount("#app");
 app.use(stockPlugin)
+
+
 const requireComponent = require.context(
   // The relative path of the components folder
   "./components",

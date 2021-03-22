@@ -46,6 +46,9 @@ class CandleViewSet(viewsets.ModelViewSet):
         to = self.request.query_params.get('to', None)
         if to is None:
             raise serializers.ValidationError('to empty')
+        today = datetime.datetime.today().date()
+        if today < parse_datetime(to).date():
+            to = today.strftime("%Y-%m-%dT00:00:00.000Z")
         queryset = queryset.filter(time__range=[from_, to])
 
         hours = self.request.query_params.getlist('hours', None)
