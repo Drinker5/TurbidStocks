@@ -23,6 +23,18 @@ export default {
           })
       },
 
+      loadGroupCandles: ({ figi, interval, from, to }) => {
+        return axios
+          .get("/api/candles/group_candles/", {
+            params: {
+              figi: figi,
+              interval: interval,
+              from: from,
+              to: to,
+              format: "json",
+            },
+          })
+      },
       loadInstrument: (ticker) => {
         return axios
           .get(`/api/instruments/${ticker}/`, {

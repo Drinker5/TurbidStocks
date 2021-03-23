@@ -4,12 +4,20 @@ import { createStore } from 'vuex'
 const store = createStore({
   state() {
     return {
-      instrument: null
+      instrument: null,
+      groupCandles: [],
+      dateRange: null
     }
   },
   mutations: {
     setInstrument(state, instrument) {
       state.instrument = instrument
+    },
+    setGroupCandles(state, candles) {
+      state.groupCandles = candles
+    },
+    setDateRange(state, dateRange) {
+      state.dateRange = dateRange
     }
   }
 })

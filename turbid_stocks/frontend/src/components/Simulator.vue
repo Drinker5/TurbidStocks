@@ -65,9 +65,9 @@
             :step="step"
           >
           </el-slider>
-          <el-checkbox v-model="isBuySellReversed"
-            >Reverse buy/sell</el-checkbox
-          >
+          <el-checkbox v-model="isBuySellReversed">
+            Reverse buy/sell
+          </el-checkbox>
         </el-form-item>
 
         <el-form-item label="Buy price">
@@ -111,6 +111,7 @@
 
     <el-col :span="18">
       <StockChart :loading="loading" :candles="candles" />
+      <SimulatorGroupCandles :loading="loading" />
       <SimulatorReview :operations="operations" :loading="loading" />
     </el-col>
   </el-row>
@@ -138,30 +139,36 @@ export default {
       buySellTimes: [(7 * 60 + 30) * 60 * 1000, 18 * 60 * 60 * 1000],
       minTime: 7 * 60 * 60 * 1000,
       maxTime: 23 * 60 * 60 * 1000,
-      isBuySellReversed: false,
+      isBuySellReversed: true,
       lotPrice: 0,
       buyPrice: "Open",
       sellPrice: "Open",
       interval: 15,
       intervalOptions: [
-        { value: 1, label: "1min", step: "00:01" },
-        { value: 5, label: "5min", step: "00:05" },
-        { value: 10, label: "10min", step: "00:10" },
-        { value: 15, label: "15min", step: "00:15" },
-        { value: 30, label: "30min", step: "00:30" },
+        { value: 1, label: "1min" },
+        { value: 5, label: "5min" },
+        { value: 10, label: "10min" },
+        { value: 15, label: "15min" },
+        { value: 30, label: "30min" },
+        { value: 60, label: "hour" },
       ],
     };
   },
   mounted() {},
   watch: {
     candles(newV) {
+      if (newV.length <= 0) return;
       this.loadIntradayCandles(newV[0]);
       this.lotPrice = newV[0].o * this.instrument.lot;
+      this.loadGroupCandles();
+    },
+    interval() {
+      this.loadGroupCandles();
     },
   },
   computed: {
     intervalRequestParam() {
-      return `${this.interval}min`;
+      return this.interval < 60 ? `${this.interval}min` : "hour";
     },
     step() {
       return this.interval * 60 * 1000;
@@ -177,6 +184,23 @@ export default {
     ...mapState(["instrument"]),
   },
   methods: {
+    loadGroupCandles() {
+      if (!this.dateRange) return;
+      this.loading = true;
+      this.$stockService
+        .loadGroupCandles({
+          figi: this.instrument.figi,
+          interval: this.intervalRequestParam,
+          from: this.dateRange[0],
+          to: this.dateRange[1],
+        })
+        .then((response) => {
+          this.$store.commit("setGroupCandles", response.data.results);
+        })
+        .finally(() => {
+          this.loading = false;
+        });
+    },
     loadIntradayCandles(candle) {
       let from = new Date(candle.time);
       // минус один тик чтобы не взять начальную свечу следующего дня
@@ -193,8 +217,9 @@ export default {
           format: "json",
         })
         .then((response) => {
-          this.intardayCandles = response.data.results;
-          let startDate = new Date(this.intardayCandles[0].time);
+          let intradayCandles = response.data.results;
+          if (intradayCandles.length <= 0) return;
+          let startDate = new Date(intradayCandles[0].time);
 
           // добавим сдвиг чтобы попасть в UTC
           let base = startDate.setHours(
@@ -204,9 +229,9 @@ export default {
             0
           );
 
-          let l = new Date(this.intardayCandles[0].time).getTime();
+          let l = new Date(intradayCandles[0].time).getTime();
           let r = new Date(
-            this.intardayCandles[this.intardayCandles.length - 1].time
+            intradayCandles[intradayCandles.length - 1].time
           ).getTime();
 
           this.minTime = l - base;
@@ -297,7 +322,7 @@ export default {
       let lotsCanBeBought = Math.trunc(this.money / lotPrice);
       let tradePrice = lotsCanBeBought * lotPrice;
       let tax = this.getTax(tradePrice);
-      let payment = tradePrice + tax;
+      let payment = Math.round((tradePrice + tax) * 100) / 100;
       let count = lotsCanBeBought * this.instrument.lot;
       if (count <= 0) return;
       this.money = Math.round((this.money - payment) * 100) / 100;
@@ -308,9 +333,10 @@ export default {
         time: time,
         type: "buy",
         count: count,
-        price: tradePrice,
+        price: price,
         tax: tax,
         value: value,
+        change: -payment,
       });
     },
 
@@ -321,7 +347,7 @@ export default {
       let lotsCanBeSold = this.stockCount / this.instrument.lot;
       let tradePrice = lotsCanBeSold * lotPrice;
       let tax = this.getTax(tradePrice);
-      let refund = tradePrice - tax;
+      let refund = Math.round((tradePrice - tax) * 100) / 100;
       let count = this.stockCount;
 
       this.money = Math.round((this.money + refund) * 100) / 100;
@@ -333,9 +359,10 @@ export default {
         time: time,
         type: "sell",
         count: count,
-        price: tradePrice,
+        price: price,
         tax: tax,
         value: value,
+        change: refund,
       });
     },
 

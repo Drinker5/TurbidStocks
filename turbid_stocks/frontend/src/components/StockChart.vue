@@ -18,6 +18,7 @@ import { mapState } from "vuex";
 StockCharts(HighCharts);
 export default {
   props: {
+    loading: Boolean,
     candles: Array,
   },
   components: {
@@ -25,9 +26,7 @@ export default {
   },
 
   data() {
-    return {
-      loading: false,
-    };
+    return {};
   },
   mounted() {},
   watch: {},
