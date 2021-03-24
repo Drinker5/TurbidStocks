@@ -18,12 +18,22 @@ export default {
   components: {
     VueHighcharts,
   },
-  date() {
+  data() {
     return {
       loading: false,
     };
   },
-  watch: {},
+  mounted() {
+    this.loadGroupCandles();
+  },
+  watch: {
+    dateRange() {
+      this.loadGroupCandles();
+    },
+    interval() {
+      this.loadGroupCandles();
+    },
+  },
   computed: {
     chartOptions() {
       return {
@@ -51,9 +61,27 @@ export default {
         ],
       };
     },
-    ...mapState(["groupCandles"]),
+    ...mapState(["groupCandles", "interval", "dateRange", "instrument"]),
   },
-  methods: {},
+  methods: {
+    loadGroupCandles() {
+      if (!this.dateRange) return;
+      this.loading = true;
+      this.$stockService
+        .loadGroupCandles({
+          figi: this.instrument.figi,
+          interval: this.$store.getters.intervalRequestParam,
+          from: this.dateRange[0],
+          to: this.dateRange[1],
+        })
+        .then((response) => {
+          this.$store.commit("setGroupCandles", response.data.results);
+        })
+        .finally(() => {
+          this.loading = false;
+        });
+    },
+  },
 };
 </script>
 

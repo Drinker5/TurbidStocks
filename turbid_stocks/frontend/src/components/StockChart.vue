@@ -19,7 +19,6 @@ StockCharts(HighCharts);
 export default {
   props: {
     loading: Boolean,
-    candles: Array,
   },
   components: {
     VueHighcharts,
@@ -44,8 +43,8 @@ export default {
         series: [
           {
             name: this.instrument.ticker,
-            data: this.candles
-              ? this.candles.map((i) => {
+            data: this.dayCandles
+              ? this.dayCandles.map((i) => {
                   return [new Date(i.time).getTime(), i.o, i.h, i.l, i.c];
                 })
               : null,
@@ -72,7 +71,7 @@ export default {
         },
       };
     },
-    ...mapState(["instrument"]),
+    ...mapState(["instrument", "dayCandles"]),
   },
   methods: {},
 };

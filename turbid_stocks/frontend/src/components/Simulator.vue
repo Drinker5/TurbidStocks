@@ -92,7 +92,7 @@
           </el-button>
         </el-form-item>
         <el-form-item label="Trading days" v-if="operations.length">
-          {{ candles.length }}
+          {{ dayCandles.length }}
         </el-form-item>
         <el-form-item label="Tades" v-if="operations.length">
           {{ operations.length }}
@@ -110,9 +110,9 @@
     </el-col>
 
     <el-col :span="18">
-      <StockChart :loading="loading" :candles="candles" />
-      <SimulatorGroupCandles :loading="loading" />
-      <SimulatorReview :operations="operations" :loading="loading" />
+      <StockChart :loading="loading" />
+      <GroupCandlesChart />
+      <ReviewChart :operations="operations" :loading="loading" />
     </el-col>
   </el-row>
 </template>
@@ -122,10 +122,7 @@ import moment from "moment";
 import { mapState } from "vuex";
 
 export default {
-  props: {
-    candles: Array,
-    dateRange: Array,
-  },
+  props: {},
   components: {},
 
   data() {
@@ -143,7 +140,6 @@ export default {
       lotPrice: 0,
       buyPrice: "Open",
       sellPrice: "Open",
-      interval: 15,
       intervalOptions: [
         { value: 1, label: "1min" },
         { value: 5, label: "5min" },
@@ -154,21 +150,27 @@ export default {
       ],
     };
   },
-  mounted() {},
+  mounted() {
+    this.loadDayCandles();
+  },
   watch: {
-    candles(newV) {
+    dateRange() {
+      this.loadDayCandles();
+    },
+    dayCandles(newV) {
       if (newV.length <= 0) return;
       this.loadIntradayCandles(newV[0]);
       this.lotPrice = newV[0].o * this.instrument.lot;
-      this.loadGroupCandles();
-    },
-    interval() {
-      this.loadGroupCandles();
     },
   },
   computed: {
-    intervalRequestParam() {
-      return this.interval < 60 ? `${this.interval}min` : "hour";
+    interval: {
+      get() {
+        return this.$store.state.interval;
+      },
+      set(value) {
+        this.$store.commit("setInterval", value);
+      },
     },
     step() {
       return this.interval * 60 * 1000;
@@ -181,21 +183,21 @@ export default {
       if (this.isBuySellReversed) return this.buySellTimes[0];
       return this.buySellTimes[1];
     },
-    ...mapState(["instrument"]),
+    ...mapState(["instrument", "dateRange", "dayCandles"]),
   },
   methods: {
-    loadGroupCandles() {
+    loadDayCandles() {
       if (!this.dateRange) return;
       this.loading = true;
       this.$stockService
-        .loadGroupCandles({
+        .loadCandles({
           figi: this.instrument.figi,
-          interval: this.intervalRequestParam,
+          interval: "day",
           from: this.dateRange[0],
           to: this.dateRange[1],
         })
         .then((response) => {
-          this.$store.commit("setGroupCandles", response.data.results);
+          this.$store.commit("setDayCandles", response.data.results);
         })
         .finally(() => {
           this.loading = false;
@@ -211,7 +213,7 @@ export default {
       this.$stockService
         .loadCandles({
           figi: this.instrument.figi,
-          interval: this.intervalRequestParam,
+          interval: this.$store.getters.intervalRequestParam,
           from: from,
           to: to,
           format: "json",
@@ -264,7 +266,7 @@ export default {
       this.$stockService
         .loadCandles({
           figi: this.instrument.figi,
-          interval: this.intervalRequestParam,
+          interval: this.$store.getters.intervalRequestParam,
           from: this.dateRange[0],
           to: this.dateRange[1],
           hours: buySellHours,

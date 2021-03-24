@@ -6,8 +6,15 @@ const store = createStore({
     return {
       instrument: null,
       groupCandles: [],
-      dateRange: null
+      dateRange: null,
+      interval: 15,
+      dayCandles: null
     }
+  },
+  getters: {
+    intervalRequestParam(state) {
+      return state.interval < 60 ? `${state.interval}min` : "hour";
+    },
   },
   mutations: {
     setInstrument(state, instrument) {
@@ -18,6 +25,12 @@ const store = createStore({
     },
     setDateRange(state, dateRange) {
       state.dateRange = dateRange
+    },
+    setInterval(state, interval) {
+      state.interval = interval
+    },
+    setDayCandles(state, dayCandles) {
+      state.dayCandles = dayCandles
     }
   }
 })
