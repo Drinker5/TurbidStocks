@@ -27,14 +27,14 @@
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="Broker tax %">
+        <el-form-item label="Commission %">
           <el-input-number
-            v-model="brokerTax"
+            v-model="brokerCommission"
             :precision="3"
             :step="0.05"
             :min="0"
             :max="5"
-            placeholder="Broker tax %"
+            placeholder="Broker commission %"
           >
           </el-input-number>
         </el-form-item>
@@ -86,6 +86,28 @@
             <el-radio-button label="Close" name="sellPrice"></el-radio-button>
           </el-radio-group>
         </el-form-item>
+        <el-form-item label="Buy days">
+          <el-checkbox-group v-model="buyDays">
+            <el-checkbox-button
+              v-for="(day, index) in ['M', 'T', 'W', 'T', 'F', 'S', 'S']"
+              :label="index + 1"
+              v-bind:key="index"
+            >
+              {{ day }}
+            </el-checkbox-button>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="Sell days">
+          <el-checkbox-group v-model="sellDays">
+            <el-checkbox-button
+              v-for="(day, index) in ['M', 'T', 'W', 'T', 'F', 'S', 'S']"
+              :label="index + 1"
+              v-bind:key="index"
+            >
+              {{ day }}
+            </el-checkbox-button>
+          </el-checkbox-group>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="loading" @click="simulate">
             Simulate
@@ -97,8 +119,8 @@
         <el-form-item label="Tades" v-if="operations.length">
           {{ operations.length }}
         </el-form-item>
-        <el-form-item label="Tax total" v-if="operations.length">
-          {{ taxTotal() }} {{ instrument.currency }}
+        <el-form-item label="Commission total" v-if="operations.length">
+          {{ commissionTotal() }} {{ instrument.currency }}
         </el-form-item>
         <el-form-item label="Profit" v-if="operations.length">
           {{ profit() }} {{ instrument.currency }}
@@ -106,6 +128,8 @@
         <el-form-item label="Performance" v-if="operations.length">
           {{ performance() }}%
         </el-form-item>
+
+        <OperationList />
       </el-form>
     </el-col>
 
@@ -131,7 +155,7 @@ export default {
       operations: [],
       money: 0,
       stockCount: 0,
-      brokerTax: 0.05,
+      brokerCommission: 0.05,
       startMoney: 1000.0,
       buySellTimes: [(7 * 60 + 30) * 60 * 1000, 18 * 60 * 60 * 1000],
       minTime: 7 * 60 * 60 * 1000,
@@ -148,6 +172,8 @@ export default {
         { value: 30, label: "30min" },
         { value: 60, label: "hour" },
       ],
+      buyDays: [1, 2, 3, 4, 5],
+      sellDays: [1, 2, 3, 4, 5],
     };
   },
   mounted() {
@@ -184,6 +210,22 @@ export default {
       return this.buySellTimes[1];
     },
     ...mapState(["instrument", "dateRange", "dayCandles"]),
+    sellDayFlags() {
+      var res = 0;
+      for (let day of this.sellDays) {
+        res |= 1 << (day - 1);
+      }
+
+      return res;
+    },
+    buyDayFlags() {
+      var res = 0;
+      for (let day of this.buyDays) {
+        res |= 1 << (day - 1);
+      }
+
+      return res;
+    },
   },
   methods: {
     loadDayCandles() {
@@ -271,7 +313,6 @@ export default {
           to: this.dateRange[1],
           hours: buySellHours,
           minutes: buySellMinutes,
-          format: "json",
         })
         .then((response) => {
           let candles = response.data.results;
@@ -305,14 +346,17 @@ export default {
       let s = this.getOptionValue(this.sellPrice);
       for (const candle of candles) {
         var time = new Date(candle.time);
+        var weekdayflag = 1 << (time.getUTCDay() - 1);
         if (
           time.getHours() == buySellHours[0] &&
-          time.getMinutes() == buySellMinutes[0]
+          time.getMinutes() == buySellMinutes[0] &&
+          (this.buyDayFlags & weekdayflag) > 0
         )
           this.buy(time, candle[b]);
         if (
           time.getHours() == buySellHours[1] &&
-          time.getMinutes() == buySellMinutes[1]
+          time.getMinutes() == buySellMinutes[1] &&
+          (this.sellDayFlags & weekdayflag) > 0
         )
           this.sell(time, candle[s]);
       }
@@ -323,8 +367,8 @@ export default {
       let lotPrice = price * this.instrument.lot;
       let lotsCanBeBought = Math.trunc(this.money / lotPrice);
       let tradePrice = lotsCanBeBought * lotPrice;
-      let tax = this.getTax(tradePrice);
-      let payment = Math.round((tradePrice + tax) * 100) / 100;
+      let commission = this.getCommission(tradePrice);
+      let payment = Math.round((tradePrice + commission) * 100) / 100;
       let count = lotsCanBeBought * this.instrument.lot;
       if (count <= 0) return;
       this.money = Math.round((this.money - payment) * 100) / 100;
@@ -336,7 +380,7 @@ export default {
         type: "buy",
         count: count,
         price: price,
-        tax: tax,
+        commission: commission,
         value: value,
         change: -payment,
       });
@@ -348,8 +392,8 @@ export default {
       let lotPrice = price * this.instrument.lot;
       let lotsCanBeSold = this.stockCount / this.instrument.lot;
       let tradePrice = lotsCanBeSold * lotPrice;
-      let tax = this.getTax(tradePrice);
-      let refund = Math.round((tradePrice - tax) * 100) / 100;
+      let commission = this.getCommission(tradePrice);
+      let refund = Math.round((tradePrice - commission) * 100) / 100;
       let count = this.stockCount;
 
       this.money = Math.round((this.money + refund) * 100) / 100;
@@ -362,21 +406,21 @@ export default {
         type: "sell",
         count: count,
         price: price,
-        tax: tax,
+        commission: commission,
         value: value,
         change: refund,
       });
     },
 
-    getTax(val) {
-      return Math.ceil(val * this.brokerTax) / 100;
+    getCommission(val) {
+      return Math.ceil(val * this.brokerCommission) / 100;
     },
 
-    taxTotal() {
+    commissionTotal() {
       if (this.operations.length <= 0) return;
       let result = this.operations.reduce((a, b) => {
-        return { tax: a.tax + b.tax };
-      }).tax;
+        return { commission: a.commission + b.commission };
+      }).commission;
       return Math.round(result * 100) / 100;
     },
     profit() {
