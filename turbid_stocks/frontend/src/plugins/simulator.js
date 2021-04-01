@@ -4,68 +4,56 @@ export default class Simulator {
     #operations = []
     #stockCount = 0
     #money = 0
-    #buyHour = 23
-    #sellHour = 12
-    #buyMinute = 30
-    #sellMinute = 0
-    buyPriceOption = 'o'
-    sellPriceOption = 'o'
-    startMoney = 1000
-    lot = 1
-    brokerCommission = 0.05
-
-    set buyTime(value) {
-        this.#buyHour = value.getHours()
-        this.#buyMinute = value.getMinutes()
-    }
-    set sellTime(value) {
-        this.#sellHour = value.getHours()
-        this.#sellMinute = value.getMinutes()
+    #lot = 1
+    #startMoney = 1000
+    #brokerCommission = 0.05
+    #commissionTotal = 0
+    constructor() {
+        this.#money = this.#startMoney
     }
 
-    simulate(candles) {
+    setLotSize(lot) {
+        this.#lot = lot
+        return this
+    }
+
+    setBrokerCommission(brokerCommission) {
+        this.#brokerCommission = brokerCommission
+        return this
+    }
+
+    setStartMoney(startMoney) {
+        this.#startMoney = startMoney
+        return this
+    }
+
+    setBrokerCommission(brokerCommission) {
+        this.#brokerCommission = brokerCommission
+        return this
+    }
+
+    reset() {
         this.#operations = []
-        this.#money = this.startMoney
-        this.#stockCount = 0;
-
-        for (const candle of candles) {
-            var time = new Date(candle.time);
-            var weekdayflag = 1 << (time.getUTCDay() - 1);
-            if (
-                time.getHours() == this.#buyHour &&
-                time.getMinutes() == this.#buyMinute &&
-                (this.buyDayFlags & weekdayflag) > 0
-            )
-                this.#buy(time, candle[this.buyPriceOption]);
-            else if (
-                time.getHours() == this.#sellHour &&
-                time.getMinutes() == this.#sellMinute &&
-                (this.sellDayFlags & weekdayflag) > 0
-            )
-                this.#sell(time, candle[this.sellPriceOption]);
-        }
-
-        return {
-            operations: this.#operations,
-            commission: this.#commissionTotal,
-            profit: this.#profit,
-            performance: this.#performance
-        }
+        this.#money = this.#startMoney
+        this.#stockCount = 0
+        this.#commissionTotal = 0
     }
 
-    #buy(time, price) {
+    buy(time, price) {
         // покупаем на всё
-        let lotPrice = price * this.lot;
+        let lotPrice = price * this.#lot;
         let lotsCanBeBought = Math.trunc(this.#money / lotPrice);
         let tradePrice = lotsCanBeBought * lotPrice;
-        let commission = this.#getCommission(tradePrice);
-        let payment = this.#fix(tradePrice + commission);
-        let count = lotsCanBeBought * this.lot;
+        let commission = this.#calcCommission(tradePrice);
+        let result = this.#fix(tradePrice + commission);
+        let count = lotsCanBeBought * this.#lot;
         if (count <= 0) return;
-        this.#money = this.#fix(this.#money - payment);
+        this.#money = this.#fix(this.#money - result);
         this.#stockCount += count;
         let value =
             this.#fix(this.#money + this.#stockCount * price);
+
+        this.#commissionTotal += commission
         this.#operations.push({
             time: time,
             type: "buy",
@@ -73,25 +61,26 @@ export default class Simulator {
             price: price,
             commission: commission,
             value: value,
-            change: -payment,
+            change: -result,
         });
     }
 
-    #sell(time, price) {
+    sell(time, price) {
         if (this.#stockCount <= 0) return;
         // продаём все
-        let lotPrice = price * this.lot;
-        let lotsCanBeSold = this.#stockCount / this.lot;
+        let lotPrice = price * this.#lot;
+        let lotsCanBeSold = this.#stockCount / this.#lot;
         let tradePrice = lotsCanBeSold * lotPrice;
-        let commission = this.#getCommission(tradePrice);
-        let refund = this.#fix(tradePrice - commission);
+        let commission = this.#calcCommission(tradePrice);
+        let result = this.#fix(tradePrice - commission);
         let count = this.#stockCount;
 
-        this.#money = this.#fix(this.#money + refund);
+        this.#money = this.#fix(this.#money + result);
         this.#stockCount = 0;
         let value =
             this.#fix(this.#money + this.#stockCount * price);
 
+        this.#commissionTotal += commission
         this.#operations.push({
             time: time,
             type: "sell",
@@ -99,32 +88,31 @@ export default class Simulator {
             price: price,
             commission: commission,
             value: value,
-            change: refund,
+            change: result,
         });
     }
 
-    #getCommission(val) {
-        return Math.ceil(val * this.brokerCommission) / 100;
+    #calcCommission(val) {
+        return Math.ceil(val * this.#brokerCommission) / 100;
     }
 
-    get #commissionTotal() {
-        if (this.#operations.length <= 0)
-            return 0;
-        let result = this.#operations.reduce((a, b) => {
-            return { commission: a.commission + b.commission };
-        }).commission;
-        return this.#fix(result * 100) / 100;
+    get operations() {
+        return this.#operations
     }
 
-    get #profit() {
+    get commissionTotal() {
+        return this.#commissionTotal
+    }
+
+    get profit() {
         if (this.#operations.length <= 0)
             return 0;
         let lastOperation = this.operations[this.#operations.length - 1];
-        let result = lastOperation.value - this.startMoney;
+        let result = lastOperation.value - this.#startMoney;
         return this.#fix(result * 100) / 100;
     }
 
-    get #performance() {
+    get performance() {
         if (this.#operations.length <= 0)
             return 0;
         let start = this.#operations[0];
