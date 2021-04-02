@@ -40,17 +40,20 @@ export default class Simulator {
     }
 
     buy(time, price) {
+        if (this.#operations.length == 0)
+            this.reset()
         // покупаем на всё
-        let lotPrice = price * this.#lot;
-        let lotsCanBeBought = Math.trunc(this.#money / lotPrice);
-        let tradePrice = lotsCanBeBought * lotPrice;
-        let commission = this.#calcCommission(tradePrice);
-        let result = this.#fix(tradePrice + commission);
-        let count = lotsCanBeBought * this.#lot;
+        const lotPrice = price * this.#lot;
+        const lotPriceWithCommision = lotPrice + this.#calcCommission(lotPrice)
+        const lotsCanBeBought = Math.trunc(this.#money / lotPriceWithCommision);
+        const tradePrice = lotsCanBeBought * lotPrice;
+        const commission = this.#calcCommission(tradePrice);
+        const result = this.#fix(tradePrice + commission);
+        const count = lotsCanBeBought * this.#lot;
         if (count <= 0) return;
         this.#money = this.#fix(this.#money - result);
         this.#stockCount += count;
-        let value =
+        const value =
             this.#fix(this.#money + this.#stockCount * price);
 
         this.#commissionTotal += commission
@@ -66,18 +69,19 @@ export default class Simulator {
     }
 
     sell(time, price) {
-        if (this.#stockCount <= 0) return;
+        if (this.#stockCount <= 0)
+            return;
         // продаём все
-        let lotPrice = price * this.#lot;
-        let lotsCanBeSold = this.#stockCount / this.#lot;
-        let tradePrice = lotsCanBeSold * lotPrice;
-        let commission = this.#calcCommission(tradePrice);
-        let result = this.#fix(tradePrice - commission);
-        let count = this.#stockCount;
+        const lotPrice = price * this.#lot;
+        const lotsCanBeSold = this.#stockCount / this.#lot;
+        const tradePrice = lotsCanBeSold * lotPrice;
+        const commission = this.#calcCommission(tradePrice);
+        const result = this.#fix(tradePrice - commission);
+        const count = this.#stockCount;
 
         this.#money = this.#fix(this.#money + result);
         this.#stockCount = 0;
-        let value =
+        const value =
             this.#fix(this.#money + this.#stockCount * price);
 
         this.#commissionTotal += commission
