@@ -111,9 +111,9 @@ export default class Simulator {
     get profit() {
         if (this.#operations.length <= 0)
             return 0;
-        let lastOperation = this.operations[this.#operations.length - 1];
+        let lastOperation = this.#operations[this.#operations.length - 1];
         let result = lastOperation.value - this.#startMoney;
-        return this.#fix(result * 100) / 100;
+        return this.#fix(result);
     }
 
     get performance() {
@@ -123,10 +123,10 @@ export default class Simulator {
         let end = this.#operations[this.#operations.length - 1];
         let days = moment(end.time).diff(moment(start.time), "days");
 
-        let startValue = start.value;
+        let startValue = this.#startMoney;
         let endValue = end.value;
         let result = (100 * (endValue / startValue - 1)) / (days / 365);
-        return this.#fix(result * 100) / 100;
+        return this.#fix(result);
     }
 
     #fix(value) {
