@@ -27,11 +27,6 @@ export default class Simulator {
         return this
     }
 
-    setBrokerCommission(brokerCommission) {
-        this.#brokerCommission = brokerCommission
-        return this
-    }
-
     reset() {
         this.#operations = []
         this.#money = this.#startMoney
@@ -105,7 +100,7 @@ export default class Simulator {
     }
 
     get commissionTotal() {
-        return this.#commissionTotal
+        return this.#fix(this.#commissionTotal)
     }
 
     get profit() {

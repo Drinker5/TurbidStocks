@@ -120,13 +120,13 @@
           {{ operations.length }}
         </el-form-item>
         <el-form-item label="Commission total" v-if="operations.length">
-          {{ commissionTotal() }} {{ instrument.currency }}
+          {{ commissionTotal }} {{ instrument.currency }}
         </el-form-item>
         <el-form-item label="Profit" v-if="operations.length">
-          {{ profit() }} {{ instrument.currency }}
+          {{ profit }} {{ instrument.currency }}
         </el-form-item>
         <el-form-item label="Performance" v-if="operations.length">
-          {{ performance() }}%
+          {{ performance }}%
         </el-form-item>
 
         <OperationList />
@@ -142,8 +142,8 @@
 </template>
 
 <script>
-import moment from "moment";
 import { mapState } from "vuex";
+import Simulator from "../plugins/simulator";
 
 export default {
   props: {},
@@ -152,9 +152,6 @@ export default {
   data() {
     return {
       loading: false,
-      operations: [],
-      money: 0,
-      stockCount: 0,
       brokerCommission: 0.05,
       startMoney: 1000.0,
       buySellTimes: [(7 * 60 + 30) * 60 * 1000, 18 * 60 * 60 * 1000],
@@ -174,6 +171,10 @@ export default {
       ],
       buyDays: [1, 2, 3, 4, 5],
       sellDays: [1, 2, 3, 4, 5],
+      operations: [],
+      commisionTotal: 0,
+      profit: 0,
+      performance: 0,
     };
   },
   mounted() {
@@ -339,9 +340,12 @@ export default {
     },
 
     startSimulate(candles, buySellHours, buySellMinutes) {
-      this.money = +this.startMoney;
-      this.stockCount = 0;
-      this.operations = [];
+      const simulator = new Simulator();
+      simulator
+        .setLotSize(this.instrument.lot)
+        .setStartMoney(+this.startMoney)
+        .setBrokerCommission(this.brokerCommission);
+
       let b = this.getOptionValue(this.buyPrice);
       let s = this.getOptionValue(this.sellPrice);
       for (const candle of candles) {
@@ -352,94 +356,19 @@ export default {
           time.getMinutes() == buySellMinutes[0] &&
           (this.buyDayFlags & weekdayflag) > 0
         )
-          this.buy(time, candle[b]);
+          simulator.buy(time, candle[b]);
         if (
           time.getHours() == buySellHours[1] &&
           time.getMinutes() == buySellMinutes[1] &&
           (this.sellDayFlags & weekdayflag) > 0
         )
-          this.sell(time, candle[s]);
+          simulator.sell(time, candle[s]);
       }
-    },
 
-    buy(time, price) {
-      // покупаем на всё
-      let lotPrice = price * this.instrument.lot;
-      let lotsCanBeBought = Math.trunc(this.money / lotPrice);
-      let tradePrice = lotsCanBeBought * lotPrice;
-      let commission = this.getCommission(tradePrice);
-      let payment = Math.round((tradePrice + commission) * 100) / 100;
-      let count = lotsCanBeBought * this.instrument.lot;
-      if (count <= 0) return;
-      this.money = Math.round((this.money - payment) * 100) / 100;
-      this.stockCount += count;
-      let value =
-        Math.round((this.money + this.stockCount * price) * 100) / 100;
-      this.operations.push({
-        time: time,
-        type: "buy",
-        count: count,
-        price: price,
-        commission: commission,
-        value: value,
-        change: -payment,
-      });
-    },
-
-    sell(time, price) {
-      if (this.stockCount <= 0) return;
-      // продаём все
-      let lotPrice = price * this.instrument.lot;
-      let lotsCanBeSold = this.stockCount / this.instrument.lot;
-      let tradePrice = lotsCanBeSold * lotPrice;
-      let commission = this.getCommission(tradePrice);
-      let refund = Math.round((tradePrice - commission) * 100) / 100;
-      let count = this.stockCount;
-
-      this.money = Math.round((this.money + refund) * 100) / 100;
-      this.stockCount = 0;
-      let value =
-        Math.round((this.money + this.stockCount * price) * 100) / 100;
-
-      this.operations.push({
-        time: time,
-        type: "sell",
-        count: count,
-        price: price,
-        commission: commission,
-        value: value,
-        change: refund,
-      });
-    },
-
-    getCommission(val) {
-      return Math.ceil(val * this.brokerCommission) / 100;
-    },
-
-    commissionTotal() {
-      if (this.operations.length <= 0) return;
-      let result = this.operations.reduce((a, b) => {
-        return { commission: a.commission + b.commission };
-      }).commission;
-      return Math.round(result * 100) / 100;
-    },
-    profit() {
-      if (this.operations.length <= 0) return;
-      let lastOperation = this.operations[this.operations.length - 1];
-      let result = lastOperation.value - this.startMoney;
-      return Math.round(result * 100) / 100;
-    },
-    performance() {
-      if (this.operations.length <= 0) return;
-
-      let start = this.operations[0];
-      let end = this.operations[this.operations.length - 1];
-      let days = moment(end.time).diff(moment(start.time), "days");
-
-      let startValue = start.value;
-      let endValue = end.value;
-      let result = (100 * (endValue / startValue - 1)) / (days / 365);
-      return Math.round(result * 100) / 100;
+      this.operations = simulator.operations;
+      this.commissionTotal = simulator.commissionTotal;
+      this.profit = simulator.profit;
+      this.performance = simulator.performance;
     },
   },
 };

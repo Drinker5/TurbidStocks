@@ -85,6 +85,8 @@ describe('Simulator work as expected', () => {
             change: -51.75,
         }
 
+        expect(op).toEqual(expectOp)
+
         simulator.sell(date2, 100)
         const op2 = simulator.operations[1]
         const expectOp2 = {
@@ -98,6 +100,19 @@ describe('Simulator work as expected', () => {
         }
 
         expect(op2).toEqual(expectOp2)
+    })
+
+    test('comission_is_beautiful', () => {
+        const simulator = new Simulator()
+            .setBrokerCommission(0.5)
+            .setStartMoney(21)
+            .setLotSize(1)
+
+        simulator.buy(new Date(), 20)
+        simulator.sell(new Date(), 40)
+
+        // 0.1 + 0.2
+        expect(simulator.commissionTotal).toEqual(0.3)
     })
 
     test('lot_size_work', () => {
