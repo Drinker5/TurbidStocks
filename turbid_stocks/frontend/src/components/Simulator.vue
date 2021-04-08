@@ -172,7 +172,7 @@ export default {
       buyDays: [1, 2, 3, 4, 5],
       sellDays: [1, 2, 3, 4, 5],
       operations: [],
-      commisionTotal: 0,
+      commissionTotal: 0,
       profit: 0,
       performance: 0,
     };
